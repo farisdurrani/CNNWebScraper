@@ -13,14 +13,14 @@ Implemented: October 2021
 2. Install the required packages in `requirements.txt`
 
 ### Usage
-1. Choose which year and topics to scrape from https://www.cnn.com/, modifying appropriately `selected_years` in line 206 and `topics` in line 209.
-2. Run the script and see the output in a new file labeled `cnn_articles.csv`, in addition with an `errors.txt` file that lists all errors encountered like broken links. The reader may see some sample outputs in the `output_samples` directory.
+1. Choose which year and topics to scrape from https://www.cnn.com/, modifying appropriately `selected_years` in line 206 and `topics` in line 209 in `cnn_scraper.py`.
+2. Run the script `cnn_scraper.py` and see the output in a new file labeled `cnn_articles.csv`, in addition with an `errors.txt` file that lists all errors encountered like broken links. The reader may see some sample outputs in the `output_samples` directory.
 
 > **Note** <br>
 > This script only parses text strings, not media items like pictures and videos.
 
 ## Output
 
-The screenshot below shows a preview of what the output is like. This `bias` score is hardcoded as part of the first iteration of this project. The `title` and `article` contents are stored in UTF-8 format, and unsurprusingly, the `article` content can be very long (see number of `characters`). `comments` notes of any abnormal `article` contents like `EMPTY` if there are almost no text in the scrapped webpage (mostly due to it being a video article), or `TRUNCATED` if the number of characters of the article exceeds the Microsoft Excel cell limit of [32,767 characters](https://support.microsoft.com/en-us/office/excel-specifications-and-limits-1672b34d-7043-467e-8e27-269d656771c3).
+The screenshot below shows a preview of what the output is like. The `bias` score is hardcoded as part of the first iteration of this project. The `title` and `article` contents are stored in UTF-8 format, and unsurprusingly, the `article` content can be very long (see number of `characters`). `comments` notes of any abnormal `article` contents like `EMPTY` if there are almost no text in the scrapped webpage (mostly due to it being a video article), or `TRUNCATED` if the number of characters of the article exceeds the Microsoft Excel cell limit of [32,767 characters](https://support.microsoft.com/en-us/office/excel-specifications-and-limits-1672b34d-7043-467e-8e27-269d656771c3).
 
 ![](readme_images/output_preview.png)
