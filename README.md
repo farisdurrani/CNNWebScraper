@@ -16,4 +16,8 @@ Implemented: October 2021
 1. Choose which year and topics to scrape from https://www.cnn.com/, modifying appropriately `selected_years` in line 206 and `topics` in line 209.
 2. Run the script and see the output in a new file labeled `cnn_articles.csv`, in addition with an `errors.txt` file that lists all errors encountered like broken links. The reader may see some sample outputs in the `output_samples` directory.
 
-Note: this script only parses text strings, not media items like pictures and videos.
+> **Note** <br>
+> This script only parses text strings, not media items like pictures and videos.
+
+## Output
+
