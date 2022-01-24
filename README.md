@@ -24,3 +24,7 @@ Implemented: October 2021
 The screenshot below shows a preview of what the output is like. The `bias` score is hardcoded as part of the first iteration of this project. The `title` and `article` contents are stored in UTF-8 format, and unsurprusingly, the `article` content can be very long (see number of `characters`). `comments` notes of any abnormal `article` contents like `EMPTY` if there are almost no text in the scrapped webpage (mostly due to it being a video article), or `TRUNCATED` if the number of characters of the article exceeds the Microsoft Excel cell limit of [32,767 characters](https://support.microsoft.com/en-us/office/excel-specifications-and-limits-1672b34d-7043-467e-8e27-269d656771c3).
 
 ![](readme_images/output_preview.png)
+
+## License
+
+<a rel="license" href="http://creativecommons.org/licenses/by/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by/4.0/88x31.png" /></a><br />This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International License</a>.
