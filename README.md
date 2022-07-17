@@ -23,10 +23,10 @@ Implemented: October 2021
 
 The screenshot below shows a preview of what the output is like. The `bias` score is hardcoded as part of the first iteration of this project. The `title` and `article` contents are stored in UTF-8 format, and unsurprusingly, the `article` content can be very long (see number of `characters`). `comments` notes of any abnormal `article` contents like `EMPTY` if there are almost no text in the scrapped webpage (mostly due to it being a video article), or `TRUNCATED` if the number of characters of the article exceeds the Microsoft Excel cell limit of [32,767 characters](https://support.microsoft.com/en-us/office/excel-specifications-and-limits-1672b34d-7043-467e-8e27-269d656771c3).
 
-![](readme_images/output_preview.png)
+![](.github/readme_images/output_preview.png)
 
 ## License
 
 CNNWebScraper is MIT licensed, as found in the [LICENSE](./LICENSE) file.
 
-CNNWebScraper documentation is Creative Commons licensed, as found in the [LICENSE-docs](./LICENSE-docs) file.
+CNNWebScraper documentation is Creative Commons licensed, as found in the [LICENSE-docs](.github/LICENSE-docs) file.
