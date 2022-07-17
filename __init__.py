@@ -3,26 +3,27 @@ from urllib.error import HTTPError
 from bs4 import BeautifulSoup as soup
 from datetime import datetime
 
+# to change based on what years you want to analyze
+SELECTED_YEARS = {"2016"}
+SELECTED_MONTHS = {"01"}
+SELECTED_DATES = {"01"}
+# topics to look at from https://us.cnn.com/article/sitemap-2016.html
+SELECTED_TOPICS = {"Politics", "Opinion", "US", "Asia", "Middle East",
+                   "Election Center 2016", "China", "Economy", "Business",
+                   "Tech", "Health", "World", "Africa"}
+OUTPUT_FILENAME = "cnn_articles.csv"
+# hardcoded bias and publisher data
+BIAS = 0
+PUBLISHER = "CNN"
+# main site map of all CNN years
+SITE_MAP_URL = "https://us.cnn.com/sitemap.html"
+# CNN standard starting url
+CNN_URL = "https://us.cnn.com"
+
 # begin time measurement
 start_time = datetime.now()
 
-# main site map of all CNN years
-site_map_url = "https://us.cnn.com/sitemap.html"
-
-# CNN standard starting url
-cnn_url = "https://us.cnn.com"
-
-# hardcoded bias and publisher data
-bias = 0
-publisher = "CNN"
-
-# to change based on what years you want to analyze
-selected_years = {"2016"}
-
-# topics to look at from https://us.cnn.com/article/sitemap-2016.html
-topics = {"Politics", "Opinion", "US", "Asia", "Middle East",
-          "Election Center 2016", "China", "Economy", "Business",
-          "Tech", "Health", "World", "Africa"}
+f, fe = None, None
 
 
 def scrape_this_month(this_topic, politics_month_soup,
@@ -37,6 +38,8 @@ def scrape_this_month(this_topic, politics_month_soup,
     :param article_num: the current general article number count
     :return: latest general article number to be updated globally
     """
+    global f, fe
+
     # finds the collection of all articles with their dates
     articles_dates_this_month = politics_month_soup.findAll(
         "div", {"class": "sitemap-entry"})[1]
@@ -56,16 +59,21 @@ def scrape_this_month(this_topic, politics_month_soup,
              + politics_month_url)
 
     # gets the month once from the first date entry
-    this_month = dates_this_month[0].text[-5:-3]
+    this_month = dates_this_month[0].text[5:7]
     this_year = dates_this_month[0].text[:4]
+
+    if SELECTED_MONTHS and this_month not in SELECTED_MONTHS:
+        return
 
     # number of articles this month of this topic
     no_articles_this_month = len(articles_this_month)
 
     # iterating through all links in the Politics month site
     for article_i in range(len(articles_this_month)):
-        # if article_i > 10:
-        #     break
+        this_day = dates_this_month[0].text[8:]
+        if SELECTED_DATES and this_day not in SELECTED_DATES:
+            # assuming CNN orders the articles by date
+            break
 
         # getting to the article webpage
         article_url = articles_this_month[article_i].a["href"]
@@ -136,8 +144,8 @@ def scrape_this_month(this_topic, politics_month_soup,
             article_url,
             article_title,
             article_content,
-            publisher,
-            str(bias),
+            PUBLISHER,
+            str(BIAS),
             this_topic,
             this_year,
             this_month,
@@ -168,13 +176,15 @@ def scrape_this_year(cnn_url_dup, year_soup, article_num):
     :param article_num the current general article number count
     :return: latest general article number to be updated globally
     """
+    global f, fe
+
     # grabs each section e.g. Politics, Entertainment for each month
     sections_this_year = year_soup.findAll("li", {"class": "section"})
 
     # grabs Politics of each month
     topics_this_year = []
     for section in sections_this_year:
-        if section.text in topics:
+        if section.text in SELECTED_TOPICS:
             topics_this_year.append(section)
 
     # goes through every topic of every month in this year and scrapes all its
@@ -210,9 +220,9 @@ def scrape_this_year(cnn_url_dup, year_soup, article_num):
 
 def run():
     # initialize csv file to write into
-    filename = "cnn_articles.csv"
+    global f, fe
     try:
-        f = open(filename, "w", encoding="utf-8")
+        f = open(OUTPUT_FILENAME, "w", encoding="utf-8")
         headers = ", link, title, article, publisher, bias, " \
                   "topic, year, month, day, characters, comments\n"
         f.write(headers)
@@ -221,21 +231,23 @@ def run():
     except PermissionError:
         exit("File is currently open. Please close it.")
 
+
     try:
         # opening up connection, grabbing the top-level page
-        uTopClient = uReq(site_map_url)
+        uTopClient = uReq(SITE_MAP_URL)
         site_map_html = uTopClient.read()
         uTopClient.close()
         # html parsing
         page_soup = soup(site_map_html, "html.parser")
     except HTTPError:
         error_msg_top = "".join(["HTTP Error in title in top site: ",
-                                 site_map_url, "\n"])
+                                 SITE_MAP_URL, "\n"])
         fe.write(error_msg_top)
         print(error_msg_top)
         f.close()
         fe.close()
         exit(-1)
+        return
 
     # grabs each year
     years = page_soup.find("ul", {"class": "sitemap-year"}) \
@@ -246,8 +258,8 @@ def run():
 
     # iterate over all years to find the selected_year and go to that year page
     for year in years:
-        if year.text.strip() in selected_years:
-            selected_year_url = cnn_url + year.a["href"]
+        if year.text.strip() in SELECTED_YEARS:
+            selected_year_url = CNN_URL + year.a["href"]
             try:
                 uYearClient = uReq(selected_year_url)
                 selected_year_html = uYearClient.read()
@@ -261,7 +273,7 @@ def run():
                 continue
 
             try:
-                gen_article_num = scrape_this_year(cnn_url, page_soup,
+                gen_article_num = scrape_this_year(CNN_URL, page_soup,
                                                    gen_article_num)
             except AttributeError:
                 error_msg_year = "".join(["Attribute Error in year: ",
@@ -275,7 +287,7 @@ def run():
     fe.close()
 
     # calculate time elapsed
-    print("Total time elapsed: {}".format(datetime.now() - start_time))
+    print(f"Total time elapsed: {datetime.now() - start_time}")
 
 
 def main():
