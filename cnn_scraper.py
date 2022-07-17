@@ -70,10 +70,9 @@ def scrape_this_month(this_topic, politics_month_soup,
 
     # iterating through all links in the Politics month site
     for article_i in range(len(articles_this_month)):
-        this_day = dates_this_month[0].text[8:]
+        this_day = dates_this_month[article_i].text[8:]
         if SELECTED_DATES and this_day not in SELECTED_DATES:
-            # assuming CNN orders the articles by date
-            break
+            continue
 
         # getting to the article webpage
         article_url = articles_this_month[article_i].a["href"]
