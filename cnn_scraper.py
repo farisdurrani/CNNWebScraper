@@ -3,10 +3,15 @@ from urllib.error import HTTPError
 from bs4 import BeautifulSoup as soup
 from datetime import datetime
 
-# to change based on what years you want to analyze
+# To change based on what years you want to analyze.
+# Set of years, e.g., "2016" to filter
 SELECTED_YEARS = {"2016"}
+# Set of numeric months, e.g., "01", "02", "12" to filter; can be empty to
+# include all
 SELECTED_MONTHS = {"01"}
-SELECTED_DATES = {"01"}
+# Set of numeric dates, e.g., "01", "31", "12" to filter; can be empty to
+# include all
+SELECTED_DATES = set()
 # topics to look at from https://us.cnn.com/article/sitemap-2016.html
 SELECTED_TOPICS = {"Politics", "Opinion", "US", "Asia", "Middle East",
                    "Election Center 2016", "China", "Economy", "Business",
