@@ -9,7 +9,7 @@ Implemented: October 2021
 ## How to Use
 
 ### Requirements
-1. Use Python 3.8
+1. Use Python 3.10
 2. Install the required packages in `requirements.txt`
 
 ### Usage
@@ -18,7 +18,7 @@ Implemented: October 2021
     - `SELECTED_MONTHS`
     - `SELECTED_YEARS`
     - `SELECTED_TOPICS`
-2. Run `python cnn_scraper.py` and see the output in a new file labeled `cnn_articles.csv`, in addition with an `errors.txt` file that lists all errors encountered like broken links in the project root directory. The reader may see some sample outputs in the `output_samples` directory.
+2. Run `python cnn_scraper.py` and see the output in outputs, in addition with an `outputs/errors.txt` file that lists all errors encountered like broken links in the project root directory. The reader may see some sample outputs in the `output_samples` directory.
 
 > **Note** <br>
 > This script only parses text strings, not media items like pictures and videos.

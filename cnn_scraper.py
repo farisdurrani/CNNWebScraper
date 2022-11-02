@@ -1,38 +1,39 @@
-from urllib.request import urlopen as uReq
-from urllib.error import HTTPError
 from bs4 import BeautifulSoup as soup
 from datetime import datetime
+from random import randint
+from urllib.error import HTTPError
+from urllib.request import urlopen as uReq
+import pandas as pd
 
 # To change based on what years you want to analyze.
 # Set of years, e.g., "2016" to filter
-SELECTED_YEARS = {"2016"}
-# Set of numeric months, e.g., "01", "02", "12" to filter; can be empty to
+SELECTED_YEARS = {"2017"}
+# Set of numeric months, e.g., "01", "02", "12" to filter; can be empty set() to
 # include all
-SELECTED_MONTHS = {"01"}
-# Set of numeric dates, e.g., "01", "31", "12" to filter; can be empty to
+SELECTED_MONTHS = {"07", "08", "09", "10", "11", "12"}
+# Set of numeric dates, e.g., "01", "31", "12" to filter; can be empty set() to
 # include all
 SELECTED_DATES = set()
 # topics to look at from https://us.cnn.com/article/sitemap-2016.html
-SELECTED_TOPICS = {"Politics", "Opinion", "US", "Asia", "Middle East",
-                   "Election Center 2016", "China", "Economy", "Business",
-                   "Tech", "Health", "World", "Africa"}
-OUTPUT_FILENAME = "cnn_articles.csv"
-# hardcoded bias and publisher data
-BIAS = 0
-PUBLISHER = "CNN"
+SELECTED_TOPICS = {"US", "Politics", "Asia", "Middle East",
+                   "Health", "World", "Opinion", "Americas",
+                   "Tech", "Africa", "China", "Election Center 2016"}
+OUTPUT_FILENAME = f"outputs/cnn_articles-2017-Jun-Dec-{randint(1_000, 9_999)}.csv"
 # main site map of all CNN years
 SITE_MAP_URL = "https://us.cnn.com/sitemap.html"
 # CNN standard starting url
 CNN_URL = "https://us.cnn.com"
+GET_EVERY_X_ARTICLE_PER_MONTH_TOPIC = 5
 
 # begin time measurement
 start_time = datetime.now()
 
-f, fe = None, None
+contentsToWrite = []
+errorsToWrite = []
 
 
 def scrape_this_month(this_topic, politics_month_soup,
-                      politics_month_url, article_num):
+                      politics_month_url, article_num) -> int:
     """
     Scrapes all articles of one month of one topic and adds them all to the csv
     :param politics_month_soup: the page soup of the site hosting all the
@@ -43,7 +44,6 @@ def scrape_this_month(this_topic, politics_month_soup,
     :param article_num: the current general article number count
     :return: latest general article number to be updated globally
     """
-    global f, fe
 
     # finds the collection of all articles with their dates
     articles_dates_this_month = politics_month_soup.findAll(
@@ -68,13 +68,16 @@ def scrape_this_month(this_topic, politics_month_soup,
     this_year = dates_this_month[0].text[:4]
 
     if SELECTED_MONTHS and this_month not in SELECTED_MONTHS:
-        return
+        return article_num
 
     # number of articles this month of this topic
-    no_articles_this_month = len(articles_this_month)
+    num_articles_this_month = len(articles_this_month)
 
     # iterating through all links in the Politics month site
-    for article_i in range(len(articles_this_month)):
+    for article_i in range(num_articles_this_month):
+        if article_i % GET_EVERY_X_ARTICLE_PER_MONTH_TOPIC != 0:
+            continue
+
         this_day = dates_this_month[article_i].text[8:]
         if SELECTED_DATES and this_day not in SELECTED_DATES:
             continue
@@ -89,73 +92,66 @@ def scrape_this_month(this_topic, politics_month_soup,
         except HTTPError:
             error_msg_title = "".join(["HTTP Error in title in article: ",
                                        article_url, "\n"])
-            fe.write(error_msg_title)
+            errorsToWrite.append(error_msg_title)
             print(error_msg_title)
             continue
 
-            # getting the article's title, double-quoted to include commas
+        # get article headline (title)
         try:
-            article_title = '"' + article_soup.h1.text + '"'
+            article_title = article_soup.h1.get_text().strip()
         except AttributeError:
             error_msg_title = "".join(["Attribute Error in title in article: ",
                                        article_url, "\n"])
-            fe.write(error_msg_title)
+            errorsToWrite.append(error_msg_title)
             print(error_msg_title)
             continue
 
-        # getting last updated article time and article date
-        # month and year have been retrieved above, in str format
-        article_date = dates_this_month[article_i].text[-2:]
+        # get author
+        author_html = article_soup.find("span", {"class": "byline__name"})
+        author_name = None
+        if author_html:
+            try:
+                author_name = author_html.get_text()
+            except AttributeError:
+                pass
 
-        # finding all paragraphs of the article's contents
-        article_paragraphs = article_soup. \
-            findAll("p", {"class": "paragraph inline-placeholder"})
-
-        # getting the whole article's contents, enclosed in "" to include commas
-        # in the article
-        article_content = '"'
+        # getting the whole article's contents
         try:
-            for a_paragraph in article_paragraphs:
-                text = a_paragraph.text.strip()
-                article_content = ' '.join([article_content, text])
+            article_content = ' '.join([p.get_text().strip() for p in
+                                        article_soup.findAll("p", {
+                                            "class": "paragraph inline-placeholder"})])
         except AttributeError:
             error_msg_content = "".join([
                 "Attribute Error in content in article: ", article_url, "\n"])
-            fe.write(error_msg_content)
+            errorsToWrite.append(error_msg_content)
             print(error_msg_content)
             continue
-        article_content += '"'
 
         # number of characters in article content
         article_length = len(article_content)
 
+        if article_length < 10:
+            # some "articles" are actually videos or graphics that don't have
+            # text
+            continue
+
         # MS Excel has a cell character limit of 32767
         # if an article passes over 31500 (for added buffer since ’ becomes
-        # â€™), it will be truncated to the first 31500 characters,
-        # and added TRUNCATED under comments. article_length remains
-        # original
-        if article_length > 31500:
-            article_content = '"'.join([article_content[:31500], ''])
-            article_length = str(article_length) + "," + "TRUNCATED"
-        elif article_length < 10:
-            # some "articles" are actually videos or graphics that don't have
-            # text. EMPTY is added under comments. article_length remains
-            article_length = str(article_length) + "," + "EMPTY"
+        # â€™), it will be truncated to the first 31500 characters
+        # article_length remains as original
+        article_content = '"'.join([article_content[:31500], ''])
 
-        # write article info into csv file
-        f.write(",".join([
-            str(article_num),
-            article_url,
-            article_title,
-            article_content,
-            PUBLISHER,
-            str(BIAS),
-            this_topic,
-            this_year,
-            this_month,
-            article_date,
-            str(article_length),
-            "\n"]))
+        # write article info an array of dicts to later be written into CSV
+        contentsToWrite.append({
+            "timestamp": f"{this_year}-{this_month}-{this_day}",
+            "webUrl": article_url,
+            "headline": article_title,
+            "sectionName": this_topic,
+            "site": "CNN",
+            "bodyContent": article_content,
+            "article_length": article_length,
+            "author_name": author_name
+        })
 
         article_num += 1
 
@@ -164,7 +160,7 @@ def scrape_this_month(this_topic, politics_month_soup,
         if article_i % 10 == 0:
             print("{} {} {} {}/{} {}".format(this_topic, this_month,
                                              this_year, article_i,
-                                             no_articles_this_month,
+                                             num_articles_this_month,
                                              datetime.now() - start_time))
 
     return article_num
@@ -180,7 +176,6 @@ def scrape_this_year(cnn_url_dup, year_soup, article_num):
     :param article_num the current general article number count
     :return: latest general article number to be updated globally
     """
-    global f, fe
 
     # grabs each section e.g. Politics, Entertainment for each month
     sections_this_year = year_soup.findAll("li", {"class": "section"})
@@ -204,7 +199,7 @@ def scrape_this_year(cnn_url_dup, year_soup, article_num):
         except HTTPError:
             error_msg_title = "".join(["HTTP Error in title in topic: ",
                                        politics_month_url, "\n"])
-            fe.write(error_msg_title)
+            errorsToWrite.append(error_msg_title)
             print(error_msg_title)
             continue
 
@@ -215,7 +210,7 @@ def scrape_this_year(cnn_url_dup, year_soup, article_num):
         except AttributeError:
             error_msg_month = "".join(["Attribute Error in month: ",
                                        politics_month_url, "\n"])
-            fe.write(error_msg_month)
+            errorsToWrite.append(error_msg_month)
             print(error_msg_month)
             continue
 
@@ -223,19 +218,6 @@ def scrape_this_year(cnn_url_dup, year_soup, article_num):
 
 
 def run():
-    # initialize csv file to write into
-    global f, fe
-    try:
-        f = open(OUTPUT_FILENAME, "w", encoding="utf-8")
-        headers = ", link, title, article, publisher, bias, " \
-                  "topic, year, month, day, characters, comments\n"
-        f.write(headers)
-
-        fe = open("errors.txt", "w", encoding="utf-8")
-    except PermissionError:
-        exit("File is currently open. Please close it.")
-
-
     try:
         # opening up connection, grabbing the top-level page
         uTopClient = uReq(SITE_MAP_URL)
@@ -246,10 +228,9 @@ def run():
     except HTTPError:
         error_msg_top = "".join(["HTTP Error in title in top site: ",
                                  SITE_MAP_URL, "\n"])
-        fe.write(error_msg_top)
+        errorsToWrite.append(error_msg_top)
         print(error_msg_top)
-        f.close()
-        fe.close()
+        save_and_close_files()
         exit(-1)
         return
 
@@ -272,7 +253,7 @@ def run():
             except HTTPError:
                 error_msg_year = "".join(["HTTP Error in year: ",
                                           selected_year_url, "\n"])
-                fe.write(error_msg_year)
+                errorsToWrite.append(error_msg_year)
                 print(error_msg_year)
                 continue
 
@@ -282,16 +263,22 @@ def run():
             except AttributeError:
                 error_msg_year = "".join(["Attribute Error in year: ",
                                           selected_year_url, "\n"])
-                fe.write(error_msg_year)
+                errorsToWrite.append(error_msg_year)
                 print(error_msg_year)
                 continue
 
-    # close csv file
-    f.close()
-    fe.close()
+    save_and_close_files()
 
     # calculate time elapsed
     print(f"Total time elapsed: {datetime.now() - start_time}")
+
+
+def save_and_close_files():
+    df = pd.DataFrame(contentsToWrite)
+    df.to_csv(OUTPUT_FILENAME)
+    with open(f"{OUTPUT_FILENAME[:-4]}-ERRORS.txt", "w",
+              encoding="utf-8") as fe:
+        fe.write('\n'.join(errorsToWrite))
 
 
 def main():
