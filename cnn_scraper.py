@@ -13,6 +13,7 @@ SELECTED_YEARS = {"2017"}
 # Set of numeric months, e.g., "01", "02", "12" to filter; can be empty set() to
 # include all
 SELECTED_MONTHS = {"01", "02", "03", "04", "05", "06"}
+# {"01", "02", "03", "04", "05", "06"}
 # {"07", "08", "09", "10", "11", "12"}
 # Set of numeric dates, e.g., "01", "31", "12" to filter; can be empty set() to
 # include all
