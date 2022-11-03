@@ -3,9 +3,9 @@ from bs4 import BeautifulSoup as soup
 from datetime import datetime
 from random import randint
 from urllib.error import HTTPError
-from urllib.request import urlopen as uReq
 import pandas as pd
 import multiprocessing as mp
+import requests
 
 # To change based on what years you want to analyze.
 # Set of years, e.g., "2016" to filter
@@ -25,7 +25,7 @@ OUTPUT_FILENAME = f"outputs/cnn_articles-2017-Jun-Dec-{randint(1_000, 9_999)}.cs
 SITE_MAP_URL = "https://us.cnn.com/sitemap.html"
 # CNN standard starting url
 CNN_URL = "https://us.cnn.com"
-GET_EVERY_X_ARTICLE_PER_MONTH_TOPIC = 5
+GET_EVERY_X_ARTICLE_PER_MONTH_TOPIC = 4
 
 # begin time measurement
 start_time = datetime.now()
@@ -93,10 +93,13 @@ def scrape_this_month(this_section, politics_month_soup,
         num_articles_this_month=num_articles_this_month,
     ) for i, article_html in enumerate(articles_this_month)]
 
-    with mp.Pool(mp.cpu_count()) as pool:
+    with mp.Pool(4) as pool:
         this_month_to_write = pool.map(scrape_this_article, articles_meta)
 
     contentsToWrite.extend(this_month_to_write)
+
+    # for article_meta in articles_meta:
+    #     contentsToWrite.append(scrape_this_article(article_meta))
 
     return article_num
 
@@ -119,13 +122,16 @@ def scrape_this_article(article_metadata: ArticleMetadata):
 
     # getting to the article webpage
     try:
-        uArticleClient = uReq(article_url)
-        article_html = uArticleClient.read()
-        uArticleClient.close()
-        article_soup = soup(article_html, "html.parser")
+        article_html = requests.get(article_url)
+        article_soup = soup(article_html.text, "html.parser")
     except HTTPError:
         error_msg_title = "".join(["HTTP Error in title in article: ",
                                    article_url, "\n"])
+        errorsToWrite.append(error_msg_title)
+        print(error_msg_title)
+        return {}
+    except requests.exceptions.ConnectTimeout:
+        error_msg_title = f"ConnectionTimeout on {article_url}\n"
         errorsToWrite.append(error_msg_title)
         print(error_msg_title)
         return {}
@@ -228,10 +234,8 @@ def scrape_this_year(cnn_url_dup, year_soup, article_num):
         politics_month_url = cnn_url_dup + topic.a["href"]
 
         try:
-            uMonthClient = uReq(politics_month_url)
-            politics_month_html = uMonthClient.read()
-            uMonthClient.close()
-            topic_soup = soup(politics_month_html, "html.parser")
+            politics_month_html = requests.get(politics_month_url)
+            topic_soup = soup(politics_month_html.text, "html.parser")
         except HTTPError:
             error_msg_title = "".join(["HTTP Error in title in topic: ",
                                        politics_month_url, "\n"])
@@ -256,11 +260,9 @@ def scrape_this_year(cnn_url_dup, year_soup, article_num):
 def run():
     try:
         # opening up connection, grabbing the top-level page
-        uTopClient = uReq(SITE_MAP_URL)
-        site_map_html = uTopClient.read()
-        uTopClient.close()
+        site_map_html = requests.get(SITE_MAP_URL)
         # html parsing
-        page_soup = soup(site_map_html, "html.parser")
+        page_soup = soup(site_map_html.text, "html.parser")
     except HTTPError:
         error_msg_top = "".join(["HTTP Error in title in top site: ",
                                  SITE_MAP_URL, "\n"])
@@ -282,10 +284,8 @@ def run():
         if year.text.strip() in SELECTED_YEARS:
             selected_year_url = CNN_URL + year.a["href"]
             try:
-                uYearClient = uReq(selected_year_url)
-                selected_year_html = uYearClient.read()
-                uYearClient.close()
-                page_soup = soup(selected_year_html, "html.parser")
+                selected_year_html = requests.get(selected_year_url)
+                page_soup = soup(selected_year_html.text, "html.parser")
             except HTTPError:
                 error_msg_year = "".join(["HTTP Error in year: ",
                                           selected_year_url, "\n"])
