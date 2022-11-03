@@ -1,9 +1,11 @@
+from dataclasses import dataclass
 from bs4 import BeautifulSoup as soup
 from datetime import datetime
 from random import randint
 from urllib.error import HTTPError
 from urllib.request import urlopen as uReq
 import pandas as pd
+import multiprocessing as mp
 
 # To change based on what years you want to analyze.
 # Set of years, e.g., "2016" to filter
@@ -32,7 +34,18 @@ contentsToWrite = []
 errorsToWrite = []
 
 
-def scrape_this_month(this_topic, politics_month_soup,
+@dataclass
+class ArticleMetadata:
+    article_i: int
+    article_url: str
+    this_year: int
+    this_month: int
+    this_day: int
+    this_section: str
+    num_articles_this_month: int
+
+
+def scrape_this_month(this_section, politics_month_soup,
                       politics_month_url, article_num) -> int:
     """
     Scrapes all articles of one month of one topic and adds them all to the csv
@@ -70,97 +83,115 @@ def scrape_this_month(this_topic, politics_month_soup,
     # number of articles this month of this topic
     num_articles_this_month = len(articles_this_month)
 
-    # iterating through all links in the Politics month site
-    for article_i in range(num_articles_this_month):
-        if article_i % GET_EVERY_X_ARTICLE_PER_MONTH_TOPIC != 0:
-            continue
+    articles_meta = [ArticleMetadata(
+        article_i=i,
+        article_url=article_html.a["href"],
+        this_year=this_year,
+        this_month=this_month,
+        this_day=dates_this_month[i].text[8:],
+        this_section=this_section,
+        num_articles_this_month=num_articles_this_month,
+    ) for i, article_html in enumerate(articles_this_month)]
 
-        this_day = dates_this_month[article_i].text[8:]
-        if SELECTED_DATES and this_day not in SELECTED_DATES:
-            continue
+    with mp.Pool(mp.cpu_count()) as pool:
+        this_month_to_write = pool.map(scrape_this_article, articles_meta)
 
-        # getting to the article webpage
-        article_url = articles_this_month[article_i].a["href"]
-        try:
-            uArticleClient = uReq(article_url)
-            article_html = uArticleClient.read()
-            uArticleClient.close()
-            article_soup = soup(article_html, "html.parser")
-        except HTTPError:
-            error_msg_title = "".join(["HTTP Error in title in article: ",
-                                       article_url, "\n"])
-            errorsToWrite.append(error_msg_title)
-            print(error_msg_title)
-            continue
-
-        # get article headline (title)
-        try:
-            article_title = article_soup.h1.get_text().strip()
-        except AttributeError:
-            error_msg_title = "".join(["Attribute Error in title in article: ",
-                                       article_url, "\n"])
-            errorsToWrite.append(error_msg_title)
-            print(error_msg_title)
-            continue
-
-        # get author
-        author_html = article_soup.find("span", {"class": "byline__name"})
-        author_name = None
-        if author_html:
-            try:
-                author_name = author_html.get_text()
-            except AttributeError:
-                pass
-
-        # getting the whole article's contents
-        try:
-            article_content = ' '.join([p.get_text().strip() for p in
-                                        article_soup.findAll("p", {
-                                            "class": "paragraph inline-placeholder"})])
-        except AttributeError:
-            error_msg_content = "".join([
-                "Attribute Error in content in article: ", article_url, "\n"])
-            errorsToWrite.append(error_msg_content)
-            print(error_msg_content)
-            continue
-
-        # number of characters in article content
-        article_length = len(article_content)
-
-        if article_length < 10:
-            # some "articles" are actually videos or graphics that don't have
-            # text
-            continue
-
-        # MS Excel has a cell character limit of 32767
-        # if an article passes over 31500 (for added buffer since ’ becomes
-        # â€™), it will be truncated to the first 31500 characters
-        # article_length remains as original
-        article_content = '"'.join([article_content[:31500], ''])
-
-        # write article info an array of dicts to later be written into CSV
-        contentsToWrite.append({
-            "timestamp": f"{this_year}-{this_month}-{this_day}",
-            "webUrl": article_url,
-            "headline": article_title,
-            "sectionName": this_topic,
-            "site": "CNN",
-            "bodyContent": article_content,
-            "article_length": article_length,
-            "author_name": author_name
-        })
-
-        article_num += 1
-
-        # print status every 10 articles completed with format:
-        # topic | month | year | article_i / no. of articles | time elapsed
-        if article_i % 10 == 0:
-            print("{} {} {} {}/{} {}".format(this_topic, this_month,
-                                             this_year, article_i,
-                                             num_articles_this_month,
-                                             datetime.now() - start_time))
+    contentsToWrite.extend(this_month_to_write)
 
     return article_num
+
+
+def scrape_this_article(article_metadata: ArticleMetadata):
+    article_i = article_metadata.article_i
+    article_url = article_metadata.article_url
+    this_year = article_metadata.this_year
+    this_month = article_metadata.this_month
+    this_day = article_metadata.this_day
+    this_section = article_metadata.this_section
+    num_articles_this_month = article_metadata.num_articles_this_month
+
+    # iterating through all links in the Politics month site
+    if article_i % GET_EVERY_X_ARTICLE_PER_MONTH_TOPIC != 0:
+        return {}
+
+    if SELECTED_DATES and this_day not in SELECTED_DATES:
+        return {}
+
+    # getting to the article webpage
+    try:
+        uArticleClient = uReq(article_url)
+        article_html = uArticleClient.read()
+        uArticleClient.close()
+        article_soup = soup(article_html, "html.parser")
+    except HTTPError:
+        error_msg_title = "".join(["HTTP Error in title in article: ",
+                                   article_url, "\n"])
+        errorsToWrite.append(error_msg_title)
+        print(error_msg_title)
+        return {}
+
+    # get article headline (title)
+    try:
+        article_title = article_soup.h1.get_text().strip()
+    except AttributeError:
+        error_msg_title = "".join(["Attribute Error in title in article: ",
+                                   article_url, "\n"])
+        errorsToWrite.append(error_msg_title)
+        print(error_msg_title)
+        return {}
+
+    # get author
+    author_html = article_soup.find("span", {"class": "byline__name"})
+    author_name = None
+    if author_html:
+        try:
+            author_name = author_html.get_text()
+        except AttributeError:
+            pass
+
+    # getting the whole article's contents
+    try:
+        article_content = ' '.join([p.get_text().strip() for p in
+                                    article_soup.findAll("p", {
+                                        "class": "paragraph inline-placeholder"})])
+    except AttributeError:
+        error_msg_content = "".join([
+            "Attribute Error in content in article: ", article_url, "\n"])
+        errorsToWrite.append(error_msg_content)
+        print(error_msg_content)
+        return {}
+
+    # number of characters in article content
+    article_length = len(article_content)
+
+    if article_length < 10:
+        # some "articles" are actually videos or graphics that don't have
+        # text
+        return {}
+
+    # print status every 10 articles completed with format:
+    # topic | month | year | article_i / no. of articles | time elapsed
+    if article_i % 10 == 0:
+        print("{} {} {} {}/{} {}".format(this_section, this_month,
+                                         this_year, article_i,
+                                         num_articles_this_month,
+                                         datetime.now() - start_time))
+
+    # MS Excel has a cell character limit of 32767
+    # if an article passes over 31500 (for added buffer since ’ becomes
+    # â€™), it will be truncated to the first 31500 characters
+    # article_length remains as original
+    # write article info an array of dicts to later be written into CSV
+    return {
+        "timestamp": f"{this_year}-{this_month}-{this_day}",
+        "webUrl": article_url,
+        "headline": article_title,
+        "sectionName": this_section,
+        "site": "CNN",
+        "bodyContent": article_content[:31500],
+        "article_length": article_length,
+        "author_name": author_name
+    }
 
 
 def scrape_this_year(cnn_url_dup, year_soup, article_num):
@@ -279,7 +310,7 @@ def run():
 
 
 def save_and_close_files():
-    df = pd.DataFrame(contentsToWrite)
+    df = pd.DataFrame(contentsToWrite).dropna()
     df.to_csv(OUTPUT_FILENAME)
     with open(f"{OUTPUT_FILENAME[:-4]}-ERRORS.txt", "w",
               encoding="utf-8") as fe:
