@@ -67,9 +67,6 @@ def scrape_this_month(this_topic, politics_month_soup,
     this_month = dates_this_month[0].text[5:7]
     this_year = dates_this_month[0].text[:4]
 
-    if SELECTED_MONTHS and this_month not in SELECTED_MONTHS:
-        return article_num
-
     # number of articles this month of this topic
     num_articles_this_month = len(articles_this_month)
 
@@ -189,8 +186,16 @@ def scrape_this_year(cnn_url_dup, year_soup, article_num):
     # goes through every topic of every month in this year and scrapes all its
     # articles
     for topic in topics_this_year:
+        # skip unneeded months
+        this_url_month = topic.a["href"].split("-")[-1][:-5]
+        if len(this_url_month) == 1:
+            this_url_month = '0' + this_url_month
+        if SELECTED_MONTHS and this_url_month not in SELECTED_MONTHS:
+            continue
+
         # goes to this single month site of Politics
         politics_month_url = cnn_url_dup + topic.a["href"]
+
         try:
             uMonthClient = uReq(politics_month_url)
             politics_month_html = uMonthClient.read()
