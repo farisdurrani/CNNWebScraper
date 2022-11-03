@@ -1,7 +1,0 @@
-Attribute Error in title in article: https://www.cnn.com/style/article/shenzhen-vna-musuem-osm/index.html
-HTTP Error in title in article: https://www.cnn.com/2017/11/15/cnn-underscored/best-chromebook-guide-shop/index.html
-Attribute Error in title in article: https://www.cnn.com/2018/08/24/us/applenews-stewart-defenders/index.html
-Attribute Error in title in article: https://www.cnn.com/2018/08/24/us/applenews-stewart-suicide/index.html
-Attribute Error in title in article: https://www.cnn.com/2018/08/24/us/applenews-stewart-women/index.html
-Attribute Error in title in article: https://www.cnn.com/2018/08/24/us/applenews-stewart-intro/index.html
-Attribute Error in title in article: https://www.cnn.com/2018/08/24/us/applenews-stewart-county/index.html
