@@ -12,20 +12,22 @@ import requests
 SELECTED_YEARS = {"2017"}
 # Set of numeric months, e.g., "01", "02", "12" to filter; can be empty set() to
 # include all
-SELECTED_MONTHS = {"07", "08", "09", "10", "11", "12"}
+SELECTED_MONTHS = {"01", "02", "03", "04", "05", "06"}
+# {"07", "08", "09", "10", "11", "12"}
 # Set of numeric dates, e.g., "01", "31", "12" to filter; can be empty set() to
 # include all
 SELECTED_DATES = set()
 # topics to look at from https://us.cnn.com/article/sitemap-2016.html
-SELECTED_TOPICS = {"US", "Politics", "Asia", "Middle East",
+SELECTED_TOPICS = {"US", "Politics", "Asia", "Middle East", "Business",
                    "Health", "World", "Opinion", "Americas",
                    "Tech", "Africa", "China", "Election Center 2016"}
-OUTPUT_FILENAME = f"outputs/cnn_articles-2017-Jun-Dec-{randint(1_000, 9_999)}.csv"
+OUTPUT_FILENAME = f"outputs/cnn_articles-{'&'.join(SELECTED_YEARS)}-Jun-Dec" \
+                  f"-{randint(1_000, 9_999)}.csv"
 # main site map of all CNN years
 SITE_MAP_URL = "https://us.cnn.com/sitemap.html"
 # CNN standard starting url
 CNN_URL = "https://us.cnn.com"
-GET_EVERY_X_ARTICLE_PER_MONTH_TOPIC = 4
+GET_EVERY_X_ARTICLE_PER_MONTH_TOPIC = 3
 
 # begin time measurement
 start_time = datetime.now()
@@ -93,7 +95,7 @@ def scrape_this_month(this_section, politics_month_soup,
         num_articles_this_month=num_articles_this_month,
     ) for i, article_html in enumerate(articles_this_month)]
 
-    with mp.Pool(4) as pool:
+    with mp.Pool(mp.cpu_count()) as pool:
         this_month_to_write = pool.map(scrape_this_article, articles_meta)
 
     contentsToWrite.extend(this_month_to_write)
