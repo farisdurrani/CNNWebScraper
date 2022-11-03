@@ -310,7 +310,9 @@ def run():
 
 
 def save_and_close_files():
-    df = pd.DataFrame(contentsToWrite).dropna()
+    df = pd.DataFrame(contentsToWrite)
+    df.dropna(inplace=True)
+    df.reset_index(drop=True, inplace=True)
     df.to_csv(OUTPUT_FILENAME)
     with open(f"{OUTPUT_FILENAME[:-4]}-ERRORS.txt", "w",
               encoding="utf-8") as fe:
