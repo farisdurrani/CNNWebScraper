@@ -9,7 +9,7 @@ import requests
 
 # To change based on what years you want to analyze.
 # Set of years, e.g., "2016" to filter
-SELECTED_YEARS = {"2021", "2022"}
+SELECTED_YEARS = {"2022"}
 # Set of numeric months, e.g., "01", "02", "12" to filter; can be empty set() to
 # include all
 SELECTED_MONTHS = set()
@@ -24,10 +24,10 @@ SELECTED_TOPICS = {"US", "Politics", "Asia", "Middle East", "Business",
                    "Tech", "Africa", "China", "Election Center 2016"}
 OUTPUT_FILENAME = f"outputs/cnn_articles-{'&'.join(SELECTED_YEARS)}" \
                   f"-{randint(1_000, 9_999)}.csv"
-# main site map of all CNN years
-SITE_MAP_URL = "https://us.cnn.com/sitemap.html"
 # CNN standard starting url
-CNN_URL = "https://us.cnn.com"
+CNN_URL = "https://www.cnn.com"
+# main site map of all CNN years
+SITE_MAP_URL = f"{CNN_URL}/sitemap.html"
 GET_EVERY_X_ARTICLE_PER_MONTH_TOPIC = 2
 
 # begin time measurement
@@ -100,9 +100,8 @@ def scrape_this_month(this_section, politics_month_soup,
         this_month_to_write = pool.map(scrape_this_article, articles_meta)
 
     contentsToWrite.extend(this_month_to_write)
-
-    # for article_meta in articles_meta:
-    #     contentsToWrite.append(scrape_this_article(article_meta))
+    
+    print(f"Finished {this_section} at {datetime.now() - start_time}\n")
 
     return article_num
 
@@ -133,7 +132,7 @@ def scrape_this_article(article_metadata: ArticleMetadata):
         errorsToWrite.append(error_msg_title)
         print(error_msg_title)
         return {}
-    except requests.exceptions.ConnectTimeout or requests.exceptions.ConnectionError:
+    except requests.exceptions.ConnectTimeout:
         error_msg_title = f"ConnectionTimeout on {article_url}\n"
         errorsToWrite.append(error_msg_title)
         print(error_msg_title)
