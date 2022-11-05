@@ -137,6 +137,11 @@ def scrape_this_article(article_metadata: ArticleMetadata):
         errorsToWrite.append(error_msg_title)
         print(error_msg_title)
         return {}
+    except requests.exceptions.TooManyRedirects:
+        error_msg_title = f"TooManyRedirects on {article_url}\n"
+        errorsToWrite.append(error_msg_title)
+        print(error_msg_title)
+        return {}
 
     # get article headline (title)
     try:
