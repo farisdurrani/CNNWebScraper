@@ -12,7 +12,7 @@ import requests
 SELECTED_YEARS = {"2022"}
 # Set of numeric months, e.g., "01", "02", "12" to filter; can be empty set() to
 # include all
-SELECTED_MONTHS = set()
+SELECTED_MONTHS = {"01"}
 # {"01", "02", "03", "04", "05", "06"}
 # {"07", "08", "09", "10", "11", "12"}
 # Set of numeric dates, e.g., "01", "31", "12" to filter; can be empty set() to
@@ -24,11 +24,13 @@ SELECTED_TOPICS = {"US", "Politics", "Asia", "Middle East", "Business",
                    "Tech", "Africa", "China", "Election Center 2016"}
 OUTPUT_FILENAME = f"outputs/cnn_articles-{'&'.join(SELECTED_YEARS)}" \
                   f"-{randint(1_000, 9_999)}.csv"
+GET_EVERY_X_ARTICLE_PER_MONTH_TOPIC = 2  # change to 1 to get all articles, 2 to get 50%
+USE_MULTIPROCESSING = True  # very fast but can crash in a heavy environment
+
 # CNN standard starting url
 CNN_URL = "https://www.cnn.com"
 # main site map of all CNN years
 SITE_MAP_URL = f"{CNN_URL}/sitemap.html"
-GET_EVERY_X_ARTICLE_PER_MONTH_TOPIC = 2
 
 # begin time measurement
 start_time = datetime.now()
@@ -96,11 +98,11 @@ def scrape_this_month(this_section, politics_month_soup,
         num_articles_this_month=num_articles_this_month,
     ) for i, article_html in enumerate(articles_this_month)]
 
-    with mp.Pool(mp.cpu_count()) as pool:
+    with mp.Pool(mp.cpu_count() if USE_MULTIPROCESSING else 1) as pool:
         this_month_to_write = pool.map(scrape_this_article, articles_meta)
 
     contentsToWrite.extend(this_month_to_write)
-    
+
     print(f"Finished {this_section} at {datetime.now() - start_time}\n")
 
     return article_num
