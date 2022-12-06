@@ -67,6 +67,9 @@ automatically formats the date.
 ![](.github/readme_images/output_preview.png)
 ![](.github/readme_images/output_preview_vs.png)
 
+# Troubleshooting
+Sometimes, the app will not get any articles and will output an empty CSV after one or two minutes of executing. This could be due to network restrictions after excessive scraping. Try again. The app prints out logs in the terminal as it is scraping articles. Once you see the logs, you shouldn't face any network restrictions anymore for this execution
+
 # License
 
 CNNWebScraper is MIT licensed, as found in the [LICENSE](./LICENSE) file.
